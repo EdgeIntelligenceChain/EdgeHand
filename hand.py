@@ -62,7 +62,6 @@ def getBalance4Addr(addr: str) -> int:
     port = s.getsockname()[1]
     s.close()
     message = Message(Actions.Balance4Addr, addr, port)
-    print(message, peer, port)
     Utils.send_to_peer(message, peer)
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -72,17 +71,15 @@ def getBalance4Addr(addr: str) -> int:
 
     timeout = time.time() + 60
 
+    message = None
     while True and time.time() < timeout:
         if addr[0] == peer[0]:
-            data = conn.recv(1024)[4:]
-            #print('###', data)
-            if data:
+            message = Utils.read_all_from_socket(conn, gs)
+            if message:
                 break
         else:
             pass
     conn.close()
-
-    message = Utils.deserialize(data.decode(), gs)
     return message.data
 
 
