@@ -1,0 +1,8 @@
+.idea
+seeds.node
+__pycache__
+ds/__pycache__
+p2p/__pycache__
+params/__pycache__
+utils/__pycache__
+wallet/__pycache__
