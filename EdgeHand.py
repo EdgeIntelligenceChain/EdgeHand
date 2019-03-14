@@ -37,14 +37,7 @@ logging.basicConfig(
     format='[%(asctime)s][%(module)s:%(lineno)d] %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
-def with_lock(lock):
-    def dec(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            with lock:
-                return func(*args, **kwargs)
-        return wrapper
-    return dec
+
 
 class EdgeHand(object):
 
