@@ -8,7 +8,7 @@ from wallet.Wallet import Wallet
 from ds.UnspentTxOut import UnspentTxOut
 from ds.TxIn import TxIn
 from ds.TxOut import TxOut
-
+from utils.Errors import TxnValidationError
 
 
 

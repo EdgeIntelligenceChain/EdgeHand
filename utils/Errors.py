@@ -6,5 +6,6 @@ class BaseException(Exception):
 
 
 
-
+class TxnValidationError(BaseException):
+    pass
 
