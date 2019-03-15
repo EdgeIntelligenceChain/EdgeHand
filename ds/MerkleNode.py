@@ -3,8 +3,6 @@ from typing import (
     Callable)
 
 
-from utils.Errors import (BaseException, TxUnlockError, TxnValidationError, BlockValidationError)
-
 from utils.Utils import Utils
 from params.Params import Params
 from wallet.Wallet import Wallet

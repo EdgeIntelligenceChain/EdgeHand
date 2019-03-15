@@ -19,9 +19,6 @@ from ds.OutPoint import OutPoint
 from ds.Transaction import Transaction
 
 
-from utils.Errors import BlockValidationError
-from utils.Errors import TxnValidationError
-
 from utils.Utils import Utils
 from params.Params import Params
 from ds.MerkleNode import MerkleNode
