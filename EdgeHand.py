@@ -18,7 +18,7 @@ from ds.Block  import Block
 from ds.UnspentTxOut import UnspentTxOut
 
 from utils.Utils import Utils
-from utils.Errors import BaseException, Parse2MessageError, PortGenerateError, ListenError, UnwantedResultError
+from utils.Errors import BaseException
 
 from p2p.Message import Message
 

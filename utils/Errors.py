@@ -6,16 +6,5 @@ class BaseException(Exception):
 class TxnValidationError(BaseException):
     pass
 
-class PortGenerateError(BaseException):
-    pass
-
-class Parse2MessageError(BaseException):
-    pass
-
-class ListenError(BaseException):
-    pass
-
-class UnwantedResultError(BaseException):
-    pass
 
 
