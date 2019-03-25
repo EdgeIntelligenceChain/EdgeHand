@@ -7,7 +7,7 @@ edgeHand = EdgeHand()
 balance = edgeHand.getBalance4Addr()
 
 #发送交易
-txn = edgeHand.sendTransaction('1NY36FKZqM97oEobfCewhUpHsbzAUSifzo', 1000000000)
+txn = edgeHand.sendTransaction('1NY36FKZqM97oEobfCewhUpHsbzAUSifzo', 110)
 
 print(txn)
 
