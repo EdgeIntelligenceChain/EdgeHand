@@ -5,14 +5,22 @@ edgeHand = EdgeHand()
 
 #查询钱包余额，当不传入地址时，默认查询初始化钱包的余额
 balance = edgeHand.getBalance4Addr()
+print(balance)
+
+utxos = edgeHand.getUTXO4Addr()
+print('###: ',utxos[0])
+
+txn = edgeHand.sendTransaction('1NY36FKZqM97oEobfCewhUpHsbzAUSifzo', 110)
+txstatus = edgeHand.getTxStatus(txn.id)
+print(txstatus)
 
 #发送交易
-txn = edgeHand.sendTransaction('1NY36FKZqM97oEobfCewhUpHsbzAUSifzo', 110)
+#
 
-print(txn)
+#print(txn)
 
 #查询交易状态
-edgeHand.getTxStatus(txn)
+#edgeHand.getTxStatus(txn)
 
 # 输出样例：
 # #185000000000# in address b'1M32gppnnKfCcedHq3weaAagKU7Ppt6KFD'

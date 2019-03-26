@@ -88,7 +88,7 @@ class EdgeHand(object):
     def _makeTransaction(self, to_addr, value: int = 0, fee: int = 0) -> Transaction:
         utxos_to_spend = set()
         utxos = list(sorted(self.getUTXO4Addr(self.wallet.my_address), key=lambda i: (i.value, i.height)))
-        #print('utxos element: ', utxos[0])
+
         if sum(i.value for i in utxos) < value + fee:
             logger.info(f'[EdgeHand] value to send is larger than balance.')
             return False
@@ -123,33 +123,55 @@ class EdgeHand(object):
                 wallet_addr = self.wallet.my_address
             peer, port = self._getPort()
             message = Message(Actions.Balance4Addr, wallet_addr, port)
-            if Utils.send_to_peer(message, peer):
+
+            with socket.create_connection(peer(), timeout=5) as s:
+                s.sendall(Utils.encode_socket_data(message))
                 logger.info(f'[EdgeHand] succeed to send Balance4Addr to {peer}')
 
-                message = self._getRecv(peer, port)
+                msg_len = int(binascii.hexlify(s.recv(4) or b'\x00'), 16)
+                data = b''
+                while msg_len > 0:
+                    tdat = s.recv(1024)
+                    data += tdat
+                    msg_len -= len(tdat)
+
+                message = Utils.deserialize(data.decode(), self.gs) if data else None
                 if message:
                     logger.info(f'[EdgeHand] received Balance4Addr from peer {peer}')
                     return message.data
                 else:
+                    logger.info(f'[EdgeHand] failed to resolve message for Balance4Addr from peer {peer}')
                     return None
-            else:
-                logger.info(f'[EdgeHand] failed to send Balance4Addr to {peer}')
-                return None
 
-    def getUTXO4Addr(self, wallet_addr: str)-> Iterable[UnspentTxOut]:
+
+
+    def getUTXO4Addr(self, wallet_addr: str = None)-> Iterable[UnspentTxOut]:
         with self.chain_lock:
+            if wallet_addr is None:
+                wallet_addr = self.wallet.my_address
             peer, port = self._getPort()
             message = Message(Actions.UTXO4Addr, wallet_addr, port)
-            if Utils.send_to_peer(message, peer):
+
+
+            with socket.create_connection(peer(), timeout=5) as s:
+                s.sendall(Utils.encode_socket_data(message))
                 logger.info(f'[EdgeHand] succeed to send UTXO4Addr to {peer}')
-                message = self._getRecv(peer, port)
+
+                msg_len = int(binascii.hexlify(s.recv(4) or b'\x00'), 16)
+                data = b''
+                while msg_len > 0:
+                    tdat = s.recv(1024)
+                    data += tdat
+                    msg_len -= len(tdat)
+
+                message = Utils.deserialize(data.decode(), self.gs) if data else None
                 if message:
                     logger.info(f'[EdgeHand] received UTXO4Addr from peer {peer}')
-                    print(f'#{len(message.data)}# utxo in address {wallet_addr}')
                     return message.data
-            else:
-                logger.info(f'[EdgeHand] failed to send UTXO4Addr to {peer}')
-            return None
+                else:
+                    logger.info(f'[EdgeHand] failed to resolve message for UTXO4Addr from peer {peer}')
+                    return None
+
 
 
     def sendTransaction(self, to_addr, value):
@@ -161,25 +183,38 @@ class EdgeHand(object):
             message = Message(Actions.TxRev, txn, port)
             if Utils.send_to_peer(message, peer):
                 logger.info(f'[EdgeHand] succeed to send a transaction to {peer}')
-                return True
+                return txn
             else:
                 logger.info(f'[EdgeHand] failed to send TxRev to {peer}')
-            return False
+            return None
 
     def getTxStatus(self, txid: str) -> str:
         with self.chain_lock:
             peer, port = self._getPort()
             message = Message(Actions.TxStatusReq, txid, port)
-            if Utils.send_to_peer(message, peer):
-                logger.info(f'[EdgeHand] succeed to send UTXO4Addr to {peer}')
-                message = self._getRecv(peer, port)
+
+            with socket.create_connection(peer(), timeout=5) as s:
+                s.sendall(Utils.encode_socket_data(message))
+                logger.info(f'[EdgeHand] succeed to send TxStatus to {peer}')
+
+                msg_len = int(binascii.hexlify(s.recv(4) or b'\x00'), 16)
+                data = b''
+                while msg_len > 0:
+                    tdat = s.recv(1024)
+                    data += tdat
+                    msg_len -= len(tdat)
+
+                message = Utils.deserialize(data.decode(), self.gs) if data else None
                 if message:
+                    logger.info(f'[EdgeHand] received TxStatus from peer {peer}')
                     return message.data
                 else:
+                    logger.info(f'[EdgeHand] failed to resolve message for TxStatus from peer {peer}')
                     return None
-            else:
-                logger.info(f'[EdgeHand] failed to send getTxStatus to {peer}')
-                return None
+
+
+
+
 
 
 
