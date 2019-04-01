@@ -36,6 +36,8 @@ class Wallet(object):
 
 		sha = hashlib.sha256(pubkey).digest()
 		ripe = hashlib.new('ripemd160', sha).digest()
+		#print(str(b58encode_check(b'\x00' + ripe)).encode('utf-8'))
+		#print(type(b58encode_check(b'\x00' + ripe)))
 		return str(b58encode_check(b'\x00' + ripe))
 
 

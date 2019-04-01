@@ -48,7 +48,7 @@ class EdgeHand(object):
         self.chain_lock = threading.RLock()
 
         self.wallet = Wallet.init_wallet(walletFile)
-        self.peerList = Peer.init_peers(Params.PEERS_FILE)
+        self.peerList = Params.PEERS #Peer.init_peers(Params.PEERS_FILE)
 
     def _getPort(self)-> Tuple[Peer, int]:
         if self.peerList:
@@ -62,7 +62,6 @@ class EdgeHand(object):
         port = s.getsockname()[1]
         s.close()
         return peer, port
-
 
     def _makeTransaction(self, to_addr, value: int = 0, fee: int = 0) -> Transaction:
         utxos_to_spend = set()
@@ -101,9 +100,10 @@ class EdgeHand(object):
             if wallet_addr is None:
                 wallet_addr = self.wallet.my_address
             peer, port = self._getPort()
+            #print(peer,port)
             message = Message(Actions.Balance4Addr, wallet_addr, port)
 
-            with socket.create_connection(peer(), timeout=25) as s:
+            with socket.create_connection(peer, timeout=25) as s:
                 s.sendall(Utils.encode_socket_data(message))
                 logger.info(f'[EdgeHand] succeed to send Balance4Addr to {peer}')
 
@@ -132,7 +132,7 @@ class EdgeHand(object):
             message = Message(Actions.UTXO4Addr, wallet_addr, port)
 
 
-            with socket.create_connection(peer(), timeout=25) as s:
+            with socket.create_connection(peer, timeout=25) as s:
                 s.sendall(Utils.encode_socket_data(message))
                 logger.info(f'[EdgeHand] succeed to send UTXO4Addr to {peer}')
 
