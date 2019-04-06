@@ -8,12 +8,13 @@ balance = edgeHand.getBalance4Addr()
 print(balance)
 
 utxos = edgeHand.getUTXO4Addr()
-print('###: ',utxos[0])
+if len(utxos) > 0:
+    print(f'there are {len(utxos)} utxos for this account')
 
-txn = edgeHand.sendTransaction('1NY36FKZqM97oEobfCewhUpHsbzAUSifzo', 110)
-txstatus = edgeHand.getTxStatus(txn.id)
-print(txn.id)
-print(txstatus)
+    txn = edgeHand.sendTransaction('1NY36FKZqM97oEobfCewhUpHsbzAUSifzo', 110)
+
+    txstatus = edgeHand.getTxStatus(txn.id)
+    print(txstatus)
 
 #发送交易
 #
