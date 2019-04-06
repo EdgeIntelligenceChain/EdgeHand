@@ -52,7 +52,8 @@ class EdgeHand(object):
 
     def _getPort(self)-> Tuple[Peer, int]:
         if self.peerList:
-            peer = random.sample(self.peerList, 1)[0]
+            peerinfo = random.sample(self.peerList, 1)[0]
+            peer = Peer(peerinfo[0], peerinfo[1])
         else:
             peer = Peer('127.0.0.1', 9999)
 
