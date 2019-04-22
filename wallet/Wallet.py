@@ -38,7 +38,9 @@ class Wallet(object):
 		ripe = hashlib.new('ripemd160', sha).digest()
 		#print(str(b58encode_check(b'\x00' + ripe)).encode('utf-8'))
 		#print(type(b58encode_check(b'\x00' + ripe)))
-		return str(b58encode_check(b'\x00' + ripe))
+		address = b58encode_check(b'\x00' + ripe)
+		address = address if isinstance(address, str) else str(address, encoding="utf-8")
+		return address
 
 
 

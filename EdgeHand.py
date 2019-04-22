@@ -14,6 +14,8 @@ from ds.MerkleNode import MerkleNode
 from ds.UnspentTxOut import UnspentTxOut
 from ds.OutPoint import OutPoint
 
+from script import scriptBuild
+
 import os
 import time
 import random
@@ -58,7 +60,7 @@ class EdgeHand(object):
             peer = Peer('127.0.0.1', 9999)
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(("",0))
+        s.bind(("", 0))
         s.listen(1)
         port = s.getsockname()[1]
         s.close()
@@ -79,8 +81,8 @@ class EdgeHand(object):
 
         change = sum(i.value for i in utxos_to_spend) - value - fee
 
-        txout = [TxOut(value = value, to_address=to_addr)]
-        txout.append(TxOut(value = change, to_address = self.wallet.my_address))
+        txout = [TxOut(value = value, pk_script=self._make_pk_script(to_addr))]
+        txout.append(TxOut(value = change, pk_script=self._make_pk_script(to_addr)))
         txin = [self._makeTxin(utxo.outpoint, txout) for utxo in utxos_to_spend]
 
         txn = Transaction(txins=txin, txouts=txout)
@@ -89,12 +91,24 @@ class EdgeHand(object):
 
     def _makeTxin(self, outpoint: OutPoint, txout: TxOut) -> TxIn:
         sequence = 0
+        # get public key
         pk = self.wallet.signing_key.verifying_key.to_string()
+        # get signature
         spend_msg = Utils.sha256d(
                     Utils.serialize(outpoint) + str(sequence) +
                     binascii.hexlify(pk).decode() + Utils.serialize(txout)).encode()
-        return TxIn(to_spend=outpoint, unlock_pk=pk,
-            unlock_sig=self.wallet.signing_key.sign(spend_msg), sequence=sequence)
+        # use private key to sign the data for the first time
+        signature = self.wallet.signing_key.sign(spend_msg)
+
+        return TxIn(to_spend=outpoint, signature_script=self._make_signature_script(signature, pk), sequence=sequence)
+
+    def _make_signature_script(self, signature, pk):
+        # use template
+        return scriptBuild.get_signature_script_without_hashtype(signature, pk)
+
+    def _make_pk_script(self, to_addr):
+        # make template
+        return scriptBuild.get_pk_script(to_addr)
 
     def getBalance4Addr(self, wallet_addr: str = None) -> int:
         with self.chain_lock:

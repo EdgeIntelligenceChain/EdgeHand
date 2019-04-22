@@ -5,21 +5,24 @@ edgeHand = EdgeHand()
 
 #查询钱包余额，当不传入地址时，默认查询初始化钱包的余额
 balance = edgeHand.getBalance4Addr()
+print("balance is : ", end="")
 print(balance)
 
 utxos = edgeHand.getUTXO4Addr()
+print("utxos length is : ", end="")
+print(len(utxos))
 if len(utxos) > 0:
     print(f'there are {len(utxos)} utxos for this account')
 
+    # 这是发给随意一个人的交易地址
     txn = edgeHand.sendTransaction('1NY36FKZqM97oEobfCewhUpHsbzAUSifzo', 110)
 
     txstatus = edgeHand.getTxStatus(txn.id)
     print(txstatus)
 
 #发送交易
-#
 
-#print(txn)
+# print(txn)
 
 #查询交易状态
 
