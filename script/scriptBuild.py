@@ -2,6 +2,7 @@ import binascii
 from math import log
 
 from base58 import b58decode_check
+from params.Params import Params
 
 from . import opcodes
 
@@ -30,19 +31,57 @@ def make_pk_script(pk_hash) -> str:
     return pubkey_script
 
 
-def get_signature_script_without_hashtype(signature, pk) -> bytes:
+def get_redeem_script(pubkeys):
+
+    if len(pubkeys) < Params.P2SH_PUBLIC_KEY:
+        raise Exception("Length of the input pubkey is not the same as P2SH_PUBLIC_KEY")
+
+    if Params.P2SH_PUBLIC_KEY < Params.P2SH_VERIFY_KEY:
+        raise Exception("numbers of P2SH_PUBLIC_KEY should be larger than P2SH_VERIFY_KEY")
+
+    redeem_script = Script('OP_' + str(Params.P2SH_VERIFY_KEY)).parse()
+    for pubkey in pubkeys:
+        redeem_script += len(pubkey).to_bytes(1, 'big')
+        redeem_script += pubkey
+    redeem_script += Script('OP_' + str(Params.P2SH_PUBLIC_KEY)+' OP_CHECKMULTISIG').parse()
+
+    return redeem_script
+
+
+def get_signature_script_without_hashtype(signature, invalue) -> bytes:
     """
     this version is just for checking our process is good enough to get the message.
+
+    the invalue is publickey for P2PKH way and redeem script for P2SH way.
     """
+    def add_len(sub: bytes) -> bytes:
+        return len(sub).to_bytes(sizeof(len(sub)), 'big') + sub
 
-    # get signature len
-    sig_len = len(signature)
+    def add_flag(num: int) -> bytes:
+        return num.to_bytes(sizeof(num), 'big')
 
-    # get pk_script len
-    pk_len = len(pk)
+    signature_script = b''
+    if Params.SCRIPT_TYPE == 0:
+        signature_script += add_len(signature)
+        signature_script += add_len(invalue)
 
-    signature_script = sig_len.to_bytes(sizeof(sig_len), 'big') + signature + pk_len.to_bytes(sizeof(pk_len),
-                                                                                         'big') + pk
+    elif Params.SCRIPT_TYPE == 1:
+        if not isinstance(signature, list):
+            raise Exception('The input signature is not list for verifying process')
+        for sig in signature:
+            signature_script += add_len(sig)
+        # put in the redeem script
+        cnt = len(invalue)
+        if cnt < 76:
+            signature_script += add_len(invalue)
+        elif 76 <= cnt < 2**8:
+            signature_script += add_flag(0x4c) + add_len(invalue)  # OP_PUSHDATA1
+        elif 2**8 <= cnt < 2**16:
+            signature_script += add_flag(0x4d) + add_len(invalue)  # OP_PUSHDATA2
+        elif 2**16 <= cnt < 2**32:
+            signature_script += add_flag(0x4e) + add_len(invalue)  # OP_PUSHDATA4
+        else:
+            raise Exception('Can not add OP_PUSHDATA to the signature script.')
 
     return signature_script
 
