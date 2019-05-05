@@ -56,7 +56,7 @@ class Params:
     ACTIVE_CHAIN_IDX = int(0)
 
     # Script type, we set 0 for P2PKH and 1 for P2PK
-    SCRIPT_TYPE = 0
+    SCRIPT_TYPE = 1
     P2SH_VERIFY_KEY = 2
     P2SH_PUBLIC_KEY = 3
 

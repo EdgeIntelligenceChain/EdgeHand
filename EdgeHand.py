@@ -90,17 +90,37 @@ class EdgeHand(object):
         return txn
 
     def _makeTxin(self, outpoint: OutPoint, txout: TxOut) -> TxIn:
-        sequence = 0
-        # get public key
-        pk = self.wallet.signing_key.verifying_key.to_string()
-        # get signature
-        spend_msg = Utils.sha256d(
-                    Utils.serialize(outpoint) + str(sequence) +
-                    binascii.hexlify(pk).decode() + Utils.serialize(txout)).encode()
-        # use private key to sign the data for the first time
-        signature = self.wallet.signing_key.sign(spend_msg)
 
-        return TxIn(to_spend=outpoint, signature_script=self._make_signature_script(signature, pk), sequence=sequence)
+        def build_spend_message(to_spend, pk, sequence, txouts):
+
+            spend_msg = Utils.sha256d(
+                Utils.serialize(to_spend) + str(sequence) +
+                binascii.hexlify(pk).decode() + Utils.serialize(txouts)).encode()
+
+            return spend_msg
+
+        sequence = 0
+
+        if Params.SCRIPT_TYPE == 0:
+            # get public key
+            pk = self.wallet.signing_key.verifying_key.to_string()
+            # get signature
+            spend_msg = build_spend_message(outpoint, pk, sequence, txout)
+            # use private key to sign the data for the first time
+            signature = self.wallet.signing_key.sign(spend_msg)
+            return TxIn(to_spend=outpoint, signature_script=self._make_signature_script(signature, pk),
+                        sequence=sequence)
+
+        elif Params.SCRIPT_TYPE == 1:
+            pk = [key.verifying_key.to_string() for key in self.wallet.signing_key]
+            redeem_script = scriptBuild.get_redeem_script(pk)
+            # get sig as much as the nums of len(pk)-1 in order
+            signature = [self.wallet.signing_key[i].sign(build_spend_message(outpoint, pk[i], sequence, txout))
+                         for i in range(len(pk)) if i < (len(pk) - 1)]
+            return TxIn(to_spend=outpoint, signature_script=self._make_signature_script(signature, redeem_script),
+                        sequence=sequence)
+        else:
+            raise Exception("Can't get right Param.script_type!")
 
     def _make_signature_script(self, signature, pk):
         # use template
@@ -205,13 +225,3 @@ class EdgeHand(object):
                 else:
                     logger.info(f'[EdgeHand] recv nothing for TxStatus from peer {peer}')
                     return None
-
-
-
-
-
-
-
-
-
-
