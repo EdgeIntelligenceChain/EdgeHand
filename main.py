@@ -20,7 +20,7 @@ if len(utxos) > 0:
     txstatus = edgeHand.getTxStatus(txn.id)
     print(txstatus)
 
-#发送交易
+# 发送交易
 
 # print(txn)
 

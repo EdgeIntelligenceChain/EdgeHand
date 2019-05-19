@@ -77,7 +77,7 @@ class EdgeHand(object):
             utxos_to_spend.add(utxo)
             if sum(i.value for i in utxos_to_spend) > value + fee:
                 break
-        #print(utxos_to_spend)
+        # print(utxos_to_spend)
 
         change = sum(i.value for i in utxos_to_spend) - value - fee
 
