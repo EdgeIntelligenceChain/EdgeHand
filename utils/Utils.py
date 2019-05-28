@@ -22,7 +22,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-
 class Utils(object):
 
     @classmethod

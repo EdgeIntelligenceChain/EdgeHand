@@ -12,6 +12,7 @@ from ds import TxIn
 from ds import TxOut
 
 from params import Params
+from script import scriptBuild
 
 from utils.Utils import Utils
 

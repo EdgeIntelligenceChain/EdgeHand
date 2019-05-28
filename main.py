@@ -1,24 +1,54 @@
 from EdgeHand import EdgeHand
 
-#初始化钱包,默认本地钱包为mywallet.dat
+
+# 初始化钱包,默认本地钱包为mywallet.dat
+def sendTxn(txinType=0, addr: str = None, value=110):
+
+    def getbalance(addr: str = None):
+        # 查询钱包余额，当不传入地址时，默认查询初始化钱包的余额
+        balance = edgeHand.getBalance4Addr(addr)
+        print("balance is : ", end="")
+        print(balance)
+
+        utxos = edgeHand.getUTXO4Addr(addr)
+        print("the utxo length is : ", end="")
+        print(len(utxos))
+
+        return len(utxos)
+
+    if addr is None:
+        # 采取一般方式发送P2PKH交易
+        utxo_length = getbalance()
+        if utxo_length > 0:
+            txn_p2pkh = edgeHand.sendTransaction(txinType, '1NY36FKZqM97oEobfCewhUpHsbzAUSifzo', value)
+            txn_status = edgeHand.getTxStatus(txn_p2pkh.id)
+            print(txn_status)
+
+    else:
+        # 向多签地址发送交易，或发送解锁多签地址的交易（取决于txinType）
+        utxo_length = getbalance(addr)
+        if utxo_length > 0:
+            txn = edgeHand.sendTransaction(txinType, addr, value)
+            txn_status = edgeHand.getTxStatus(txn.id)
+            print(txn_status)
+
+
+
+
 edgeHand = EdgeHand()
 
-#查询钱包余额，当不传入地址时，默认查询初始化钱包的余额
-balance = edgeHand.getBalance4Addr()
-print("balance is : ", end="")
-print(balance)
+# 地址为空则是默认发送一笔P2PKH交易
+sendTxn()
 
-utxos = edgeHand.getUTXO4Addr()
-print("utxos length is : ", end="")
-print(len(utxos))
-if len(utxos) > 0:
-    print(f'there are {len(utxos)} utxos for this account')
+# 验证多签工作则发送两笔交易
+# 产生多签地址
+# address = edgeHand.getMultiAddress()
+# print("the P2SH address from keypair is %s" % address)
+# # 先向多签地址发送交易
+# sendTxn(0, address, 110)
+# # 再从多签地址转出，转至随便一个地址
+# sendTxn(1, '1NY36FKZqM97oEobfCewhUpHsbzAUSifzo', 120)
 
-    # 这是发给随意一个人的交易地址
-    txn = edgeHand.sendTransaction('1NY36FKZqM97oEobfCewhUpHsbzAUSifzo', 110)
-
-    txstatus = edgeHand.getTxStatus(txn.id)
-    print(txstatus)
 
 # 发送交易
 

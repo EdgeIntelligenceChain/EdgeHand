@@ -66,7 +66,7 @@ class EdgeHand(object):
         s.close()
         return peer, port
 
-    def _makeTransaction(self, to_addr, value: int = 0, fee: int = 0) -> Transaction:
+    def _makeTransaction(self, txinType, to_addr, value: int = 0, fee: int = 0) -> Transaction:
         utxos_to_spend = set()
         utxos = list(sorted(self.getUTXO4Addr(self.wallet.my_address), key=lambda i: (i.value, i.height)))
 
@@ -83,13 +83,13 @@ class EdgeHand(object):
 
         txout = [TxOut(value = value, pk_script=self._make_pk_script(to_addr))]
         txout.append(TxOut(value = change, pk_script=self._make_pk_script(to_addr)))
-        txin = [self._makeTxin(utxo.outpoint, txout) for utxo in utxos_to_spend]
+        txin = [self._makeTxin(txinType, utxo.outpoint, txout) for utxo in utxos_to_spend]
 
         txn = Transaction(txins=txin, txouts=txout)
 
         return txn
 
-    def _makeTxin(self, outpoint: OutPoint, txout: TxOut) -> TxIn:
+    def _makeTxin(self, txinType, outpoint: OutPoint, txout) -> TxIn:
 
         def build_spend_message(to_spend, pk, sequence, txouts):
 
@@ -101,30 +101,35 @@ class EdgeHand(object):
 
         sequence = 0
 
-        if Params.SCRIPT_TYPE == 0:
+        if txinType == 0:
+            logger.info(f'[EdgeHand] make txn with P2PKH txnIn')
             # get public key
             pk = self.wallet.signing_key.verifying_key.to_string()
             # get signature
             spend_msg = build_spend_message(outpoint, pk, sequence, txout)
             # use private key to sign the data for the first time
             signature = self.wallet.signing_key.sign(spend_msg)
-            return TxIn(to_spend=outpoint, signature_script=self._make_signature_script(signature, pk),
+            return TxIn(to_spend=outpoint, signature_script=self._make_signature_script(txinType, signature, pk),
                         sequence=sequence)
 
-        elif Params.SCRIPT_TYPE == 1:
-            pk = [key.verifying_key.to_string() for key in self.wallet.signing_key]
+        elif txinType == 1:
+            logger.info(f'[EdgeHand] make txn with P2PSH txnIn')
+            # check the len of key pairs
+            if len(self.wallet.keypairs) != Params.P2SH_PUBLIC_KEY:
+                raise Exception("KeyPair length wrong")
+            pk = [key.verifying_key.to_string() for key in self.wallet.keypairs]
             redeem_script = scriptBuild.get_redeem_script(pk)
             # get sig as much as the nums of len(pk)-1 in order
-            signature = [self.wallet.signing_key[i].sign(build_spend_message(outpoint, pk[i], sequence, txout))
+            signature = [self.wallet.keypairs[i].sign(build_spend_message(outpoint, pk[i], sequence, txout))
                          for i in range(len(pk)) if i < (len(pk) - 1)]
-            return TxIn(to_spend=outpoint, signature_script=self._make_signature_script(signature, redeem_script),
+            return TxIn(to_spend=outpoint, signature_script=self._make_signature_script(txinType, signature, redeem_script),
                         sequence=sequence)
         else:
             raise Exception("Can't get right Param.script_type!")
 
-    def _make_signature_script(self, signature, pk):
+    def _make_signature_script(self, txin_type, signature, pk):
         # use template
-        return scriptBuild.get_signature_script_without_hashtype(signature, pk)
+        return scriptBuild.get_signature_script_without_hashtype(txin_type, signature, pk)
 
     def _make_pk_script(self, to_addr):
         # make template
@@ -188,9 +193,9 @@ class EdgeHand(object):
 
 
 
-    def sendTransaction(self, to_addr, value):
+    def sendTransaction(self, txinType, to_addr, value):
         with self.chain_lock:
-            txn = self._makeTransaction(to_addr, value)
+            txn = self._makeTransaction(txinType, to_addr, value)
             logger.info(f'[EdgeHand] built txn {txn}')
 
             peer, port = self._getPort()
@@ -225,3 +230,12 @@ class EdgeHand(object):
                 else:
                     logger.info(f'[EdgeHand] recv nothing for TxStatus from peer {peer}')
                     return None
+
+    def getMultiAddress(self) -> str:
+        with self.chain_lock:
+            pair_length = len(self.wallet.keypairs)
+            if pair_length != Params.P2SH_PUBLIC_KEY:
+                raise Exception("the key pair length is wrong in get address")
+            verifying_key = [self.wallet.keypairs[i].get_verifying_key().to_string()
+                             for i in range(pair_length)]
+            return scriptBuild.get_address_from_pk(verifying_key)

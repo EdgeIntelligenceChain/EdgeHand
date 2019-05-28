@@ -1,7 +1,8 @@
 import binascii
+import hashlib
 from math import log
 
-from base58 import b58decode_check
+from base58 import b58decode_check, b58encode_check
 from params.Params import Params
 
 from . import opcodes
@@ -11,6 +12,30 @@ def sizeof(n):
     if n == 0:
         return 1
     return int(log(n, 256)) + 1
+
+
+def get_address_from_pk(pubkey) -> str:
+    if 'ripemd160' not in hashlib.algorithms_available:
+        raise RuntimeError('missing ripemd160 hash algorithm')
+
+    def hash_pubkey(data):
+        sha = hashlib.sha256(data).digest()
+        ripe = hashlib.new('ripemd160', sha).digest()
+        return ripe
+
+    if isinstance(pubkey, bytes):
+        address = b58encode_check(b'\x00' + hash_pubkey(pubkey))
+    elif isinstance(pubkey, list):
+        # make redeem script and return P2SH address
+        redeem = get_redeem_script(pubkey)
+        address = b58encode_check(b'\x05' + hash_pubkey(redeem))
+    else:
+        raise Exception(f"[wallet] get the wrong pubkey in generating address")
+
+    # print(str(b58encode_check(b'\x00' + ripe)).encode('utf-8'))
+    # print(type(b58encode_check(b'\x00' + ripe)))
+    address = address if isinstance(address, str) else str(address, encoding="utf-8")
+    return address
 
 
 def get_pk_script(to_addr):
@@ -41,7 +66,7 @@ def get_redeem_script(pubkeys):
         raise Exception("Length of the input pubkey is not the same as P2SH_PUBLIC_KEY")
 
     if Params.P2SH_PUBLIC_KEY < Params.P2SH_VERIFY_KEY:
-        raise Exception("numbers -f P2SH_PUBLIC_KEY should be larger than P2SH_VERIFY_KEY")
+        raise Exception("numbers of P2SH_PUBLIC_KEY should be larger than P2SH_VERIFY_KEY")
 
     redeem_script = Script('OP_'+str(Params.P2SH_VERIFY_KEY)).parse()
     for pubkey in pubkeys:
@@ -61,7 +86,7 @@ def get_p2sh_script(p2sh_hash) -> bytes:
     return pubkey_script
 
 
-def get_signature_script_without_hashtype(signature, invalue) -> bytes:
+def get_signature_script_without_hashtype(txin_type, signature, invalue) -> bytes:
     """
     this version is just for checking our process is good enough to get the message.
 
@@ -73,11 +98,11 @@ def get_signature_script_without_hashtype(signature, invalue) -> bytes:
     def add_flag(num: int) -> bytes:
         return num.to_bytes(sizeof(num), 'big')
 
-    if Params.SCRIPT_TYPE == 0:
+    if txin_type == 0:
         signature_script = add_len(signature)
         signature_script += add_len(invalue)
 
-    elif Params.SCRIPT_TYPE == 1:
+    elif txin_type == 1:
         if not isinstance(signature, list):
             raise Exception('The input signature is not list for verifying process')
         signature_script = Script('OP_FALSE').parse()
@@ -101,7 +126,7 @@ def get_signature_script_without_hashtype(signature, invalue) -> bytes:
     return signature_script
 
 
-def get_signature_script(signature, pk) -> bytes:
+def get_signature_script(txin_type, signature, pk) -> bytes:
     """
     if we use signature with a hash_type we need to check in our code.
     eg : hash_type = b'\x01' (SIGHASH_ALL)and the final signature is (sig + hash_type) and we need to spilt it out later.
@@ -109,7 +134,7 @@ def get_signature_script(signature, pk) -> bytes:
     # add hash_type
     sig = signature + b'\x01'
 
-    return get_signature_script_without_hashtype(sig, pk)
+    return get_signature_script_without_hashtype(txin_type, sig, pk)
 
 
 class Script:
