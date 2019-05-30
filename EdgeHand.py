@@ -68,7 +68,10 @@ class EdgeHand(object):
 
     def _makeTransaction(self, txinType, to_addr, value: int = 0, fee: int = 0) -> Transaction:
         utxos_to_spend = set()
-        utxos = list(sorted(self.getUTXO4Addr(self.wallet.my_address), key=lambda i: (i.value, i.height)))
+        if txinType == 0:
+            utxos = list(sorted(self.getUTXO4Addr(self.wallet.my_address), key=lambda i: (i.value, i.height)))
+        if txinType == 1:
+            utxos = list(sorted(self.getUTXO4Addr(self.getMultiAddress()), key=lambda i: (i.value, i.height)))
 
         if sum(i.value for i in utxos) < value + fee:
             logger.info(f'[EdgeHand] value to send is larger than balance.')
@@ -82,7 +85,7 @@ class EdgeHand(object):
         change = sum(i.value for i in utxos_to_spend) - value - fee
 
         txout = [TxOut(value = value, pk_script=self._make_pk_script(to_addr))]
-        txout.append(TxOut(value = change, pk_script=self._make_pk_script(to_addr)))
+        txout.append(TxOut(value = change, pk_script=self._make_pk_script(self.wallet.my_address)))
         txin = [self._makeTxin(txinType, utxo.outpoint, txout) for utxo in utxos_to_spend]
 
         txn = Transaction(txins=txin, txouts=txout)
