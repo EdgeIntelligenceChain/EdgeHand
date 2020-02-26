@@ -10,26 +10,34 @@ import random
 import os
 from functools import lru_cache, wraps
 from typing import (
-    Iterable, NamedTuple, Dict, Mapping, Union, get_type_hints, Tuple,
-    Callable)
+    Iterable,
+    NamedTuple,
+    Dict,
+    Mapping,
+    Union,
+    get_type_hints,
+    Tuple,
+    Callable,
+)
 from _thread import RLock
 
 from params.Params import Params
 
 logging.basicConfig(
-    level=getattr(logging, os.environ.get('TC_LOG_LEVEL', 'INFO')),
-    format='[%(asctime)s][%(module)s:%(lineno)d] %(levelname)s %(message)s')
+    level=getattr(logging, os.environ.get("TC_LOG_LEVEL", "INFO")),
+    format="[%(asctime)s][%(module)s:%(lineno)d] %(levelname)s %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 
 class Utils(object):
-
     @classmethod
     def serialize(cls, obj) -> str:
         """NamedTuple-flavored serialization to JSON."""
+
         def contents_to_primitive(o):
-            if hasattr(o, '_asdict'):
-                o = {**o._asdict(), '_type': type(o).__name__}
+            if hasattr(o, "_asdict"):
+                o = {**o._asdict(), "_type": type(o).__name__}
             elif isinstance(o, (list, tuple)):
                 return [contents_to_primitive(i) for i in o]
             elif isinstance(o, bytes):
@@ -40,7 +48,10 @@ class Utils(object):
                 for k, v in o.items():
                     o[k] = contents_to_primitive(v)
             return o
-        return json.dumps(contents_to_primitive(obj), sort_keys=True, separators=(',', ':'))
+
+        return json.dumps(
+            contents_to_primitive(obj), sort_keys=True, separators=(",", ":")
+        )
 
     @classmethod
     def deserialize(cls, serialized: str, gs: dict) -> object:
@@ -52,9 +63,8 @@ class Utils(object):
             elif not isinstance(o, Mapping):
                 return o
 
-            _type = gs[o.pop('_type', None)]
-            bytes_keys = {
-                k for k, v in get_type_hints(_type).items() if v == bytes}
+            _type = gs[o.pop("_type", None)]
+            bytes_keys = {k for k, v in get_type_hints(_type).items() if v == bytes}
 
             for k, v in o.items():
                 o[k] = contents_to_objs(v)
@@ -63,6 +73,7 @@ class Utils(object):
                     o[k] = binascii.unhexlify(o[k]) if o[k] else o[k]
 
             return _type(**o)
+
         return contents_to_objs(json.loads(serialized))
 
     @classmethod
@@ -76,10 +87,12 @@ class Utils(object):
     @classmethod
     def encode_chain_data(cls, chain: Iterable[NamedTuple]) -> bytes:
         """Our protocol is: first 4 bytes signify msg length."""
+
         def int_to_20bytes(a: int) -> bytes:
             int_str = str(a)
-            int_str = '0'*(20 - len(int_str)) + int_str
+            int_str = "0" * (20 - len(int_str)) + int_str
             return int_str.encode()
+
         block_len = len(chain)
         to_send = cls.serialize(chain).encode()
         msg_len = len(to_send)
@@ -88,40 +101,47 @@ class Utils(object):
     @classmethod
     def encode_socket_data(cls, data: object) -> bytes:
         """Our protocol is: first 4 bytes signify msg length."""
+
         def int_to_8bytes(a: int) -> bytes:
             return binascii.unhexlify(f"{a:0{8}x}")
+
         to_send = Utils.serialize(data).encode()
         return int_to_8bytes(len(to_send)) + to_send
 
     @classmethod
-    def send_to_peer(cls, data, peer)->bool:
+    def send_to_peer(cls, data, peer) -> bool:
         tries_left = int(Params.TRIES_MAXIMUM)
 
         if tries_left <= 0:
-            logger.info(f'[utils] tries_left in send_to_peer must be larger than or equal to  1')
+            logger.info(
+                f"[utils] tries_left in send_to_peer must be larger than or equal to  1"
+            )
             return False
 
         while tries_left > 0:
-            #logger.info(f'[utils] begin to create socket connection with peer {peer}' )
+            # logger.info(f'[utils] begin to create socket connection with peer {peer}' )
             try:
                 with socket.create_connection(peer(), timeout=1) as s:
                     s.sendall(cls.encode_socket_data(data))
             except Exception:
-                logger.exception(f'[utils] failed to send to {peer} data in {Params.TRIES_MAXIMUM+1-tries_left}th time')
+                logger.exception(
+                    f"[utils] failed to send to {peer} data in {Params.TRIES_MAXIMUM+1-tries_left}th time"
+                )
                 tries_left -= 1
                 time.sleep(2)
                 if tries_left <= 0:
                     return False
             else:
-                logger.info(f'[utils] succeed in sending to {peer} data in {Params.TRIES_MAXIMUM+1-tries_left}th time')
+                logger.info(
+                    f"[utils] succeed in sending to {peer} data in {Params.TRIES_MAXIMUM+1-tries_left}th time"
+                )
                 return True
-
 
     @classmethod
     def read_all_from_socket(cls, req, gs) -> object:
-        data = b''
+        data = b""
         # Our protocol is: first 4 bytes signify msg length.
-        msg_len = int(binascii.hexlify(req.recv(4) or b'\x00'), 16)
+        msg_len = int(binascii.hexlify(req.recv(4) or b"\x00"), 16)
 
         while msg_len > 0:
             tdat = req.recv(1024)
@@ -129,6 +149,4 @@ class Utils(object):
             msg_len -= len(tdat)
 
         return cls.deserialize(data.decode(), gs) if data else None
-
-
 
