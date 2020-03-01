@@ -1,4 +1,5 @@
 from typing import Iterable, NamedTuple, Dict, Mapping, Union, Tuple, Callable
+from enum import IntEnum
 
 from utils.Utils import Utils
 from params.Params import Params
@@ -21,12 +22,28 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+class ActionId(IntEnum):
+    VOTE_PROPOSAL = 1
+    POST_2ND_LAYER_ID = 2
+    DISTRIBUTE_TASK = 3
+    RESERVING_CONFIRMATION = 4
+    APPLICATION_TASK = 5
+    COMMITMENT_TASK = 6
+    RELEASE_RELATION = 7
+    PAYMENT_REQUESTER = 8
+    PAYMENTWORKER_SIGNATURE = 9
+
+
 # Used to represent the specific output within a transaction.
-
-
 class Transaction(NamedTuple):
     txins: Iterable[TxIn]
     txouts: Iterable[TxOut]
+
+    serviceId: str
+    postId: str
+    actionId: ActionId
+    data: Iterable[str]
 
     locktime: int = None
 

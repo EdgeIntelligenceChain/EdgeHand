@@ -149,4 +149,3 @@ class Utils(object):
             msg_len -= len(tdat)
 
         return cls.deserialize(data.decode(), gs) if data else None
-

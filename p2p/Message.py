@@ -31,6 +31,9 @@ class Actions:
     PeerExtend = 10
     TopBlocksSyncReq = 11
     TopBlockReq = 12
+    BlockstatsReq = 13
+    BlockstatsGet = 14
+    BlockAtHeightReq = 15
     num2name = {
         "0": "BlocksSyncReq",
         "1": "BlocksSyncGet",
@@ -45,10 +48,19 @@ class Actions:
         "10": "PeerExtend",
         "11": "TopBlocksSyncReq",
         "12": "TopBlockReq",
+        "13": "BlockstatsReq",
+        "14": "BlockstatsGet",
+        "15": "BlockAtHeightReq"
     }
 
 
 class Message(NamedTuple):
+    """
+    TCPHandler will handle messages.
+    It will identify actions to choose specific handler,
+    get port form Message sender to create a new socket to receive Message.
+    Sometimes data: [Union] will be useless.
+    """
     action: int
     data: Union[
         str,

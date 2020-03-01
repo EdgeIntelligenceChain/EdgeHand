@@ -1,6 +1,5 @@
 from EdgeHand import EdgeHand
 from fastapi import FastAPI
-from fastapi.encoders import jsonable_encoder
 
 
 # 初始化钱包,默认本地钱包为mywallet.dat
@@ -43,7 +42,7 @@ edgeHand = EdgeHand()
 # below annotated lines for test
 
 # this is coinbase author's wallet addr on my machine
-# utxos = edgeHand.getUTXO4Addr("1E9HzRbMBVacqSzix5KBMyMxQQLYvhvLA4") 
+# utxos = edgeHand.getUTXO4Addr("1E9HzRbMBVacqSzix5KBMyMxQQLYvhvLA4")
 
 # this is coinbase tx on my machine
 # txid = "7e837eb1ea3643e7c5d64be1c5fce22167534f9fe12f7995b9209bfc35835ce5"
@@ -64,6 +63,7 @@ def get_balance(addr: str = None):
 
 @app.get("/getutxo/{addr}")
 def get_utxo(addr: str = None):
+
     """
     return format refers to:
     curl https://blockchain.info/unspent?active=1Cdid9KFAaatwczBwBttQcwXYCpvK8h7FK
@@ -79,7 +79,7 @@ def get_utxo(addr: str = None):
             "txid": utxo.txid,
             "txout_idx": utxo.txout_idx,
             "is_coinbase": utxo.is_coinbase,
-            "htight": utxo.height
+            "htight": utxo.height,
         }
         unspent_outputs.append(utxo_json)
     return {"unspent_outputs": unspent_outputs}
@@ -91,12 +91,87 @@ def get_tx_status(txid: str):
     status_msg_map = {
         0: "tx found in mempool",
         1: "tx created by block mined",
-        2: "tx not found"
+        2: "tx not found",
     }
 
     # note that tx_status is a str, convert it to int
     tx_status = int(edgeHand.getTxStatus(txid))
     return {"tx_status": tx_status, "msg": status_msg_map[tx_status]}
+
+
+@app.get("/getblockstats")
+def get_block_stats():
+
+    """
+    Return current block height, mining difficulity,
+    and tx_pool_size (How many txns in txpool)
+    """
+
+    blockStats = edgeHand.getBlockStatus()
+    return {
+        "height": blockStats.height,
+        "difficulity": (blockStats.difficulty.split(".", 1)[0] + ".")
+        + (blockStats.difficulty.split(".", 1)[1][:3]),
+        "tx_pool_size": blockStats.tx_pool_size,
+    }
+
+
+@app.get("/getblockheight")
+def get_block_height():
+
+    """
+    Return current block height,
+    compared to get_block_stats() func, provide a brief API.
+    """
+
+    blockStats = edgeHand.getBlockStatus()
+    return {"height": blockStats.height}
+
+
+@app.get("/getblockinfo/{block_height}")
+def get_block_info(block_height: int):
+
+    """
+    Return block info at block_height.
+    """
+
+    if block_height > get_block_height()["height"]:
+        return {"msg": "Invalid block height request"}
+
+    block = edgeHand.getBlockAtHeight(block_height)
+    ret = {
+        "msg": "Block height valid",
+        "height": block_height,
+        "timestamp": block.timestamp,
+        "hash": block.id,
+        "txns": [tx.id for tx in block.txns]
+    }
+    return ret
+
+
+@app.get("/getblocksrange")
+def get_blocks_range(lower: int = 1, upper: int = 1):
+
+    """
+    Get blocks range [lower, upper)
+    Coinbase block starts with 1, so set lower default value equals to 1.
+    """
+
+    curHeight = get_block_height()["height"]
+    # note that range is [lower, upper)
+    # so compare upper with curHeight+1
+    if upper > curHeight+1:
+        return {"msg": "Request block height is higher than current height"}
+    if lower <= 0:
+        lower = 1
+    if lower > upper:
+        return {"msg": f"Invalid block range [{lower}, {upper})]"}
+    
+    ret = {
+        "msg": "Block range valid",
+        "blocks": [get_block_info(i) for i in range(lower, upper)]
+    }
+    return ret
 
 
 # getbalance()

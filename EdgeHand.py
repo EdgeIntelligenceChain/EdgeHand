@@ -13,6 +13,7 @@ from ds.TxOut import TxOut
 from ds.MerkleNode import MerkleNode
 from ds.UnspentTxOut import UnspentTxOut
 from ds.OutPoint import OutPoint
+from ds.BlockStats import BlockStats
 
 from script import scriptBuild
 
@@ -57,6 +58,7 @@ class EdgeHand(object):
             self.gs["TxOut"],
             self.gs["Peer"],
             self.gs["OutPoint"],
+            self.gs["BlockStats"],
         ) = (
             globals()["Block"],
             globals()["Transaction"],
@@ -66,6 +68,7 @@ class EdgeHand(object):
             globals()["TxOut"],
             globals()["Peer"],
             globals()["OutPoint"],
+            globals()["BlockStats"],
         )
 
         self.chain_lock = threading.RLock()
@@ -193,7 +196,6 @@ class EdgeHand(object):
         return scriptBuild.get_pk_script(to_addr)
 
     # funcion: getbalance() will call this function
-    #
     def getBalance4Addr(self, wallet_addr: str = None) -> int:
         with self.chain_lock:
             # 根据钱包地址创建余额查询消息
@@ -202,7 +204,7 @@ class EdgeHand(object):
             peer, port = self._getPort()
             message = Message(Actions.Balance4Addr, wallet_addr, port)
 
-            # 向节点发送余额查询消息 
+            # 向节点发送余额查询消息
             with socket.create_connection(peer, timeout=25) as s:
                 s.sendall(Utils.encode_socket_data(message))
                 logger.info(f"[EdgeHand] succeed to send Balance4Addr to {peer}")
@@ -298,6 +300,66 @@ class EdgeHand(object):
                 else:
                     logger.info(
                         f"[EdgeHand] recv nothing for TxStatus from peer {peer}"
+                    )
+                    return None
+
+    def getBlockStatus(self) -> int:
+        """
+        Get current block status.
+        Return BlockStats(height, difficulity, tx_pool_size)
+        """
+
+        with self.chain_lock:
+            peer, port = self._getPort()
+            # second param is a placeholder, meanningless
+            message = Message(Actions.BlockstatsReq, True, port)
+
+            with socket.create_connection(peer(), timeout=25) as s:
+                s.sendall(Utils.encode_socket_data(message))
+                logger.info(f"[EdgeHand] succeed to send BlockstatsReq to {peer}")
+
+                msg_len = int(binascii.hexlify(s.recv(4) or b"\x00"), 16)
+                data = b""
+                while msg_len > 0:
+                    tdat = s.recv(1024)
+                    data += tdat
+                    msg_len -= len(tdat)
+
+                message = Utils.deserialize(data.decode(), self.gs) if data else None
+                if message:
+                    logger.info(f"[EdgeHand] received BlockStatsReq from peer {peer}")
+                    return message.data
+                else:
+                    logger.info(
+                        f"[EdgeHand] recv nothing for BlockstatsReq from peer {peer}"
+                    )
+                    return None
+
+    def getBlockAtHeight(self, height) -> Block:
+
+        with self.chain_lock:
+            peer, port = self._getPort()
+            # second param is a placeholder, meanningless
+            message = Message(Actions.BlockAtHeightReq, height, port)
+
+            with socket.create_connection(peer(), timeout=25) as s:
+                s.sendall(Utils.encode_socket_data(message))
+                logger.info(f"[EdgeHand] succeed to send BlockAtHeightReq to {peer}")
+
+                msg_len = int(binascii.hexlify(s.recv(4) or b"\x00"), 16)
+                data = b""
+                while msg_len > 0:
+                    tdat = s.recv(1024)
+                    data += tdat
+                    msg_len -= len(tdat)
+
+                message = Utils.deserialize(data.decode(), self.gs) if data else None
+                if message:
+                    logger.info(f"[EdgeHand] received Blockinfo at {height} from peer {peer}")
+                    return message.data
+                else:
+                    logger.info(
+                        f"[EdgeHand] recv nothing for BlockAtHeightReq from peer {peer}"
                     )
                     return None
 
