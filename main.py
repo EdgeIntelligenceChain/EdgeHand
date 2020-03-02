@@ -135,7 +135,7 @@ def get_block_info(block_height: int):
     Return block info at block_height.
     """
 
-    if block_height > get_block_height()["height"]:
+    if block_height > get_block_height()["height"] or block_height < 1:
         return {"msg": "Invalid block height request"}
 
     block = edgeHand.getBlockAtHeight(block_height)
