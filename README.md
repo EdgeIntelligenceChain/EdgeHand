@@ -161,3 +161,13 @@ Access `http://127.0.0.1:8000/docs` to see more info about APIs.
   ]
 }
 ```
+
+### 请求一个不存在的 API
+
+例如 `http://127.0.0.1:8000/notexist`，服务器返回值为：`{"detail":"Not Found"}`
+
+### EdgenceChain 未启动
+
+若 `EdgenceChain` 未启动，上述提到的 API 访问会返回 `Internal Server Error`，不存在的 API 仍然返回 `{"detail":"Not Found"}`.
+
+待处理。
