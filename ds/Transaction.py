@@ -1,6 +1,5 @@
-from typing import (
-    Iterable, NamedTuple, Dict, Mapping, Union, Tuple,
-    Callable)
+from typing import Iterable, NamedTuple, Dict, Mapping, Union, Tuple, Callable
+from enum import IntEnum
 
 from utils.Utils import Utils
 from params.Params import Params
@@ -11,25 +10,40 @@ from ds.TxOut import TxOut
 from utils.Errors import TxnValidationError
 
 
-
 import binascii
 import ecdsa
 import logging
 import os
 
 
-
 logging.basicConfig(
-    level=getattr(logging, os.environ.get('TC_LOG_LEVEL', 'INFO')),
-    format='[%(asctime)s][%(module)s:%(lineno)d] %(levelname)s %(message)s')
+    level=getattr(logging, os.environ.get("TC_LOG_LEVEL", "INFO")),
+    format="[%(asctime)s][%(module)s:%(lineno)d] %(levelname)s %(message)s",
+)
 logger = logging.getLogger(__name__)
 
-# Used to represent the specific output within a transaction.
 
+class ActionId(IntEnum):
+    VOTE_PROPOSAL = 1
+    POST_2ND_LAYER_ID = 2
+    DISTRIBUTE_TASK = 3
+    RESERVING_CONFIRMATION = 4
+    APPLICATION_TASK = 5
+    COMMITMENT_TASK = 6
+    RELEASE_RELATION = 7
+    PAYMENT_REQUESTER = 8
+    PAYMENTWORKER_SIGNATURE = 9
+
+
+# Used to represent the specific output within a transaction.
 class Transaction(NamedTuple):
     txins: Iterable[TxIn]
     txouts: Iterable[TxOut]
 
+    serviceId: str
+    postId: str
+    actionId: ActionId
+    data: Iterable[str]
 
     locktime: int = None
 
@@ -37,26 +51,24 @@ class Transaction(NamedTuple):
     def is_coinbase(self) -> bool:
         return len(self.txins) == 1 and self.txins[0].to_spend is None
 
-
     @property
     def id(self) -> str:
         return Utils.sha256d(Utils.serialize(self))
 
     def validate_basics(self, as_coinbase=False):
         if not self.txouts:
-            raise TxnValidationError('Missing txouts')
+            raise TxnValidationError("Missing txouts")
         if not as_coinbase and not self.txins:
-            raise TxnValidationError('MIssing txins for not coinbase transation')
-        if as_coinbase and len(self.txins)>1:
-            raise TxnValidationError('Coinbase transaction has more than one TxIns')
+            raise TxnValidationError("MIssing txins for not coinbase transation")
+        if as_coinbase and len(self.txins) > 1:
+            raise TxnValidationError("Coinbase transaction has more than one TxIns")
         if as_coinbase and self.txins[0].to_spend is not None:
-            raise TxnValidationError('Coinbase transaction should not have valid to_spend in txins')
+            raise TxnValidationError(
+                "Coinbase transaction should not have valid to_spend in txins"
+            )
 
         if len(Utils.serialize(self)) > Params.MAX_BLOCK_SERIALIZED_SIZE:
-            raise TxnValidationError('Too large')
+            raise TxnValidationError("Too large")
 
         if sum(t.value for t in self.txouts) > Params.MAX_MONEY:
-            raise TxnValidationError('Spend value too high')
-
-
-
+            raise TxnValidationError("Spend value too high")

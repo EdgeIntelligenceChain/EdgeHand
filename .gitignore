@@ -7,3 +7,6 @@ p2p/__pycache__
 params/__pycache__
 utils/__pycache__
 wallet/__pycache__
+.vscode
+.venv
+venv
