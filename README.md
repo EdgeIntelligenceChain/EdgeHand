@@ -88,7 +88,7 @@ Access `http://127.0.0.1:8000/docs` to see more info about APIs.
 
 查询当前链上区块的信息。无输入参数。
 
-- 返回值为当前区块高度 `height`，当前挖矿难度 `difficulyti`，当前交易池中的交易数量 `tx_pool_size`，例如：
+- 返回值为当前区块高度 `height`，当前挖矿难度 `difficulity`，当前交易池中的交易数量 `tx_pool_size`，例如：
 
 ```json
 {
@@ -130,7 +130,7 @@ Access `http://127.0.0.1:8000/docs` to see more info about APIs.
 
 ### `/getblocksrange`
 
-获得一个给定范围的区块信息。
+获得一个给定范围的区块信息。可用于请求所有的区块，或者区块数量多时的分页请求。
 
 - 传入参数为一个范围，`[lower, upper)`。请求地址格式示例：`http://127.0.0.1:8000/getblocksrange?lower=1&upper=3`
 
